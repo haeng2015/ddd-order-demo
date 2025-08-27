@@ -1,0 +1,95 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: ddd-demo
+  main:
+    allow-bean-definition-overriding: true
+#
+  datasource:
+    url: jdbc:h2:mem:orderdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+#
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+#
+  h2:
+    console:
+      enabled: true
+      path: /h2
+      settings:
+        trace: true
+        web-allow-others: false
+#
+  kafka:
+    # 使用EXTERNAL监听器端口（docker kafka）
+    bootstrap-servers: localhost:9092
+    producer:
+      retries: 3
+      retry-backoff: 1000
+      batch-size: 128
+      buffer-memory: 33554432
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
+      enable-idempotence: true
+    consumer:
+      group-id: order-ddd
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      enable-auto-commit: true
+
+
+  # 强制启用熔断器
+  cloud:
+    openfeign:
+      circuitbreaker:
+        enabled: true
+      client:
+        config:
+          inventory-service:
+            connectTimeout: 2000
+            readTimeout: 3000
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10000
+    instances:
+      inventory-service:
+        baseConfig: default
+
+
+logging:
+  level:
+    org.example.order.infrastructure.integration.inventory: DEBUG
+    org.apache.kafka: info
+    org.springframework.kafka: warn
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,circuitbreakerevents
+  endpoint:
+    health:
+      show-details: always
+
+
+# 防腐层调用的外部服务地址（模拟）
+inventory:
+  service:
+    url: http://localhost:9001
