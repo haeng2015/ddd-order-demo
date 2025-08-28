@@ -1,10 +1,7 @@
 package org.example.order.domain.model;
 
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Data;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.math.BigDecimal;
 
@@ -13,8 +10,8 @@ import java.math.BigDecimal;
  * 表示订单中的一个商品项
  */
 @Entity
-@Table(name = "order_items")
-@Data
+@Table(name = "tab_order_items")
+@Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED) // JPA需要无参构造函数，但限制为protected以强制通过工厂方法创建
 public class ProductItem {
 
@@ -37,6 +34,7 @@ public class ProductItem {
     @Column(name = "subtotal", nullable = false, precision = 10, scale = 2)
     private BigDecimal subtotal;
 
+    @Setter
     @ManyToOne(fetch = FetchType.LAZY)
     private Order order;
 

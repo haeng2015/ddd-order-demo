@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.example.order.domain.event.*;
 
 import java.math.BigDecimal;
@@ -19,7 +20,7 @@ import java.util.random.RandomGenerator;
  * 表示客户的一个订单，包含多个订单项
  */
 @Entity
-@Table(name = "orders")
+@Table(name = "tab_order")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED) // JPA需要无参构造函数，但限制为protected以强制通过工厂方法创建
 public class Order {
@@ -33,7 +34,7 @@ public class Order {
     private Long customerId;
 
     @Enumerated(EnumType.STRING)
-    private OrderStatus status;
+    private OrderStatusEnum status;
 
     @Column(name = "total_amount", nullable = false, precision = 10, scale = 2)
     private BigDecimal totalAmount;
@@ -46,7 +47,10 @@ public class Order {
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProductItem> productItems = new ArrayList<>();
-
+    // 新增支付方法
+    @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @Setter
+    private OrderPayment orderPayment;
 
     /**
      * 创建新订单
@@ -68,7 +72,7 @@ public class Order {
         order.id = id;
         order.orderNum = generateOrderNumber();
         order.customerId = customerId;
-        order.status = OrderStatus.CREATED;
+        order.status = OrderStatusEnum.WAIT_PAYMENT;
         order.createdAt = LocalDateTime.now();
         order.updatedAt = order.createdAt;
 
@@ -101,7 +105,7 @@ public class Order {
      * @param item 订单项
      */
     public void removeOrderItem(ProductItem item) {
-        if (status != OrderStatus.CREATED) {
+        if (status != OrderStatusEnum.WAIT_PAYMENT) {
             throw new IllegalStateException("只有在创建状态的订单才能移除订单项");
         }
         productItems.remove(item);
@@ -121,33 +125,22 @@ public class Order {
      * 支付订单
      */
     public void pay() {
-        if (status != OrderStatus.CREATED) {
+        if (status != OrderStatusEnum.WAIT_PAYMENT) {
             throw new IllegalStateException("只有创建状态的订单才能支付");
         }
-        this.status = OrderStatus.PAID;
+        this.status = OrderStatusEnum.WAIT_DELIVER;
         this.updatedAt = LocalDateTime.now();
         registerEvent(new OrderPaidEvent(id, new Money(totalAmount, "CNY")));
-    }
-
-    /**
-     * 确认订单
-     */
-    public void confirm() {
-        if (status != OrderStatus.PAID) {
-            throw new IllegalStateException("只有已支付的订单才能确认");
-        }
-        this.status = OrderStatus.CONFIRMED;
-        this.updatedAt = LocalDateTime.now();
     }
 
     /**
      * 发货
      */
     public void ship() {
-        if (status != OrderStatus.CONFIRMED) {
+        if (status != OrderStatusEnum.WAIT_DELIVER) {
             throw new IllegalStateException("只有已确认的订单才能发货");
         }
-        this.status = OrderStatus.SHIPPED;
+        this.status = OrderStatusEnum.WAIT_RECEIVE;
         this.updatedAt = LocalDateTime.now();
 
         registerEvent(new OrderShippedEvent(id));
@@ -157,10 +150,10 @@ public class Order {
      * 完成订单
      */
     public void complete() {
-        if (status != OrderStatus.SHIPPED) {
+        if (status != OrderStatusEnum.WAIT_RECEIVE) {
             throw new IllegalStateException("只有已发货的订单才能完成");
         }
-        this.status = OrderStatus.COMPLETED;
+        this.status = OrderStatusEnum.FINISH;
         this.updatedAt = LocalDateTime.now();
     }
 
@@ -168,24 +161,13 @@ public class Order {
      * 取消订单
      */
     public void cancel() {
-        if (status == OrderStatus.SHIPPED || status == OrderStatus.COMPLETED) {
+        if (status == OrderStatusEnum.WAIT_RECEIVE || status == OrderStatusEnum.FINISH) {
             throw new IllegalStateException("已发货或已完成的订单不能取消");
         }
-        this.status = OrderStatus.CANCELLED;
+        this.status = OrderStatusEnum.FINISH;
         this.updatedAt = LocalDateTime.now();
 
         registerEvent(new OrderCancelledEvent(id, customerId));
-    }
-
-    /**
-     * 退款
-     */
-    public void refund() {
-        if (status != OrderStatus.PAID && status != OrderStatus.CONFIRMED) {
-            throw new IllegalStateException("只有已支付或已确认的订单才能退款");
-        }
-        this.status = OrderStatus.REFUNDED;
-        this.updatedAt = LocalDateTime.now();
     }
 
     /**
@@ -206,7 +188,6 @@ public class Order {
         // 使用时间戳和UUID生成唯一订单号
         return "ORD" + System.currentTimeMillis() + UUID.randomUUID().toString().substring(0, 8);
     }
-
 
     @Transient
     private static final List<DomainEvent> events = new ArrayList<>();

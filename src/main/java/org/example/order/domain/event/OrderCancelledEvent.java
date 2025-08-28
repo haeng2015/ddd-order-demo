@@ -1,12 +1,10 @@
 package org.example.order.domain.event;
 
-import org.example.order.domain.model.OrderStatus;
+import org.example.order.domain.statemachine.OrderEventEnum;
 
 public class OrderCancelledEvent implements DomainEvent {
     private Long orderId;
     private Long customerId;
-
-    private OrderStatus status = OrderStatus.CANCELLED;
 
     public OrderCancelledEvent(Long orderId, Long customerId) {
         this.orderId = orderId;
@@ -15,6 +13,6 @@ public class OrderCancelledEvent implements DomainEvent {
 
     @Override
     public String getEventId() {
-        return String.format(status.name(), orderId);
+        return String.format(OrderEventEnum.CANCELLED.name(), orderId);
     }
 }

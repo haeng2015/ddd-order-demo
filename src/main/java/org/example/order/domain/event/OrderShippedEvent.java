@@ -1,10 +1,9 @@
 package org.example.order.domain.event;
 
-import org.example.order.domain.model.OrderStatus;
+import org.example.order.domain.statemachine.OrderEventEnum;
 
 public class OrderShippedEvent implements DomainEvent {
     private Long orderId;
-    private OrderStatus status = OrderStatus.SHIPPED;
 
     public OrderShippedEvent(Long orderId) {
         this.orderId = orderId;
@@ -13,6 +12,6 @@ public class OrderShippedEvent implements DomainEvent {
 
     @Override
     public String getEventId() {
-        return String.format(status.name(), orderId);
+        return String.format(OrderEventEnum.DELIVERY.name(), orderId);
     }
 }

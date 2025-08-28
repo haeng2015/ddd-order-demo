@@ -1,4 +1,4 @@
-package org.example.order.config;
+package org.example.order.infrastructure.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;

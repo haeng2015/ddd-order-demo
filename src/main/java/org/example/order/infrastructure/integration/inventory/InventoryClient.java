@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RequestBody;
  * 库存服务调用接口
  */
 @FeignClient(
-        name = "inventoryClient",
+        name = "inventory-client",
         url = "${inventory.service.url:http://localhost:8080}",
         fallbackFactory = InventoryClientFallbackFactory.class)
 public interface InventoryClient {

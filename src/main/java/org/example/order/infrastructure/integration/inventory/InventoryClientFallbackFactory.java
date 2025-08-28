@@ -20,7 +20,7 @@ public class InventoryClientFallbackFactory implements FallbackFactory<Inventory
             return InventoryResponse.builder()
                     .success(false)
                     .message("库存服务暂时不可用: " + cause.getMessage())
-                    .data(0)
+                    .status("FAILED")
                     .build();
         };
     }

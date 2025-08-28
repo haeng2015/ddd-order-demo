@@ -4,6 +4,9 @@ import lombok.Getter;
 
 import java.math.BigDecimal;
 
+/**
+ * 金额类：值对象
+ */
 @Getter
 public class Money {
     private BigDecimal amount;
